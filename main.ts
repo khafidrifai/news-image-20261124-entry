@@ -1,6 +1,7 @@
-// WORLD NEWS — Tuesday, 24 November 2026
+// WORLD NEWS — Tuesday, 24 November 2026 (v2)
 // A newspaper front page drawn from scratch: own 5x7 bitmap font,
 // own rasteriser, own PNG encoder (node:zlib). No assets, no network.
+// Eleven stories: a bigger lead illustration and a three-column grid.
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
 
@@ -124,7 +125,7 @@ const FONT: Record<string, string[]> = {
   ":": ["     ", " ##  ", " ##  ", "     ", " ##  ", " ##  ", "     "],
   ";": ["     ", " ##  ", " ##  ", "     ", " ##  ", " ##  ", "#    "],
   "'": ["  #  ", "  #  ", "  #  ", "     ", "     ", "     ", "     "],
-  "!": ["  #  ", "  #  ", "  #  ", "  #  ", "  #  ", "     ", "  #  "],
+  "!": ["  #  ", "  #  ", "  #  ", "  #  ", "     ", "  #  "],
   "?": [" ### ", "#   #", "    #", "   # ", "  #  ", "     ", "  #  "],
   "-": ["     ", "     ", "     ", " ### ", "     ", "     ", "     "],
   "(": ["   ##", "  #  ", " #   ", " #   ", " #   ", "  #  ", "   ##"],
@@ -194,19 +195,23 @@ const RED: [number, number, number] = [176, 32, 32];
 const BLUE: [number, number, number] = [24, 48, 96];
 const SKY: [number, number, number] = [198, 218, 236];
 const SEA: [number, number, number] = [38, 84, 124];
+const SEADARK: [number, number, number] = [28, 64, 98];
 const SHIP: [number, number, number] = [42, 42, 50];
 const FIRE: [number, number, number] = [232, 128, 32];
 const FIRE2: [number, number, number] = [240, 200, 40];
+const SMOKE: [number, number, number] = [120, 120, 125];
 const WHITE: [number, number, number] = [255, 255, 255];
 
 // ---------- layout ----------
 
-function story(x: number, y: number, w: number, kicker: string, headline: string, body: string): number {
+// One grid story: red kicker, headline (scale 3, up to 2 lines),
+// body (scale 2, up to 4 lines). Fits a 140px row in a 300px column.
+function gridStory(x: number, y: number, w: number, kicker: string, headline: string, body: string): void {
   drawText(x, y, kicker, 2, ...RED);
   const headLines = wrap(headline, w, 3);
-  headLines.forEach((ln, i) => drawText(x, y + 20 + i * 24, ln, 3, ...INK));
-  const bodyY = y + 20 + headLines.length * 24 + 6;
-  return para(x, bodyY, body, w, 2, 19, ...INK);
+  headLines.forEach((ln, i) => drawText(x, y + 19 + i * 24, ln, 3, ...INK));
+  const bodyY = y + 19 + headLines.length * 24 + 5;
+  para(x, bodyY, body, w, 2, 17, ...INK);
 }
 
 function draw(): void {
@@ -219,71 +224,100 @@ function draw(): void {
   drawText((W - textW(3, dateLine)) / 2, 132, dateLine, 3, ...INK);
 
   // Lead headline
-  drawText(30, 168, "RUSSIAN WARSHIP SUNK", 5, ...INK);
-  drawText(30, 210, "OFF LIBYA BY SEA DRONES", 5, ...INK);
+  drawText(30, 164, "RUSSIAN WARSHIP SUNK", 5, ...INK);
+  drawText(30, 206, "OFF LIBYA BY SEA DRONES", 5, ...INK);
 
   // Lead body, left column
-  let y = 268;
-  y = para(30, y, "Seven Ukrainian sea drones sank the Russian corvette Merkury off Benghazi, Libya, President Zelensky confirmed on Monday. The cargo ship MV Angara was also hit.", 600, 2, 19, ...INK);
-  y += 12;
-  para(30, y, "The UN mission in Libya warned the country 'must not become a battleground for foreign conflicts.' Germany's Friedrich Merz called on Russia to stop 'dangerous provocations' after missiles crossed into Poland.", 600, 2, 19, ...INK);
+  let y = 256;
+  y = para(30, y, "Seven Ukrainian sea drones sank the Russian corvette Merkury off Benghazi, Libya, President Zelensky confirmed on Monday. The cargo ship MV Angara was also hit.", 480, 2, 19, ...INK);
+  y += 10;
+  para(30, y, "The UN mission warned Libya 'must not become a battleground for foreign conflicts.' Germany's Merz called on Russia to stop 'dangerous provocations' after missiles crossed into Poland.", 480, 2, 19, ...INK);
 
-  // Lead illustration: sea strike off Benghazi
-  const ix = 650;
-  const iy = 268;
-  rect(ix, iy, 344, 80, ...SKY);
-  rect(ix, iy + 80, 344, 103, ...SEA);
-  // waves
-  line(ix + 8, iy + 108, ix + 120, iy + 104, ...WHITE);
-  line(ix + 150, iy + 130, ix + 260, iy + 126, ...WHITE);
-  line(ix + 20, iy + 152, ix + 140, iy + 148, ...WHITE);
-  line(ix + 200, iy + 166, ix + 330, iy + 162, ...WHITE);
-  // ship hull and deck
-  poly([[ix + 30, iy + 132], [ix + 170, iy + 132], [ix + 150, iy + 162], [ix + 50, iy + 162]], ...SHIP);
-  rect(ix + 50, iy + 118, 90, 14, ...SHIP);
-  line(ix + 95, iy + 118, ix + 95, iy + 88, ...SHIP);
-  rect(ix + 95, iy + 88, 16, 10, ...RED);
-  // explosion
-  circle(ix + 250, iy + 62, 26, ...FIRE2);
-  circle(ix + 250, iy + 62, 16, ...FIRE);
+  // Lead illustration: sea strike off Benghazi (bigger, two ships)
+  const ix = 534;
+  const iy = 256;
+  const iw = 460;
+  const ih = 190;
+  rect(ix, iy, iw, 85, ...SKY);
+  rect(ix, iy + 85, iw, ih - 85, ...SEA);
+  // sun with rays, top right
+  circle(ix + 400, iy + 34, 22, ...FIRE2);
+  circle(ix + 400, iy + 34, 13, ...FIRE);
   for (let k = 0; k < 8; k++) {
     const a = (k * Math.PI) / 4;
     line(
-      ix + 250 + Math.round(Math.cos(a) * 20),
-      iy + 62 + Math.round(Math.sin(a) * 20),
-      ix + 250 + Math.round(Math.cos(a) * 40),
-      iy + 62 + Math.round(Math.sin(a) * 40),
-      ...FIRE,
+      ix + 400 + Math.round(Math.cos(a) * 26),
+      iy + 34 + Math.round(Math.sin(a) * 26),
+      ix + 400 + Math.round(Math.cos(a) * 38),
+      iy + 34 + Math.round(Math.sin(a) * 38),
+      ...FIRE2,
     );
   }
-  // sea drones
-  circle(ix + 55, iy + 32, 4, ...SHIP);
-  circle(ix + 105, iy + 20, 4, ...SHIP);
-  circle(ix + 155, iy + 38, 4, ...SHIP);
-  line(ix + 30, iy + 40, ix + 51, iy + 33, ...SHIP);
-  line(ix + 80, iy + 28, ix + 101, iy + 21, ...SHIP);
-  line(ix + 130, iy + 46, ix + 151, iy + 39, ...SHIP);
-  drawText(ix + (344 - textW(2, "SEA DRONES OFF BENGHAZI")) / 2, iy + 190, "SEA DRONES OFF BENGHAZI", 2, ...INK);
+  // smoke above the stricken ship
+  circle(ix + 150, iy + 28, 16, ...SMOKE);
+  circle(ix + 178, iy + 20, 20, ...SMOKE);
+  circle(ix + 205, iy + 30, 14, ...SMOKE);
+  // explosion over the Merkury
+  circle(ix + 165, iy + 62, 26, ...FIRE2);
+  circle(ix + 165, iy + 62, 16, ...FIRE);
+  // sea drones approaching
+  const drones: Array<[number, number]> = [[40, 48], [86, 34], [128, 52], [228, 40], [268, 56]];
+  for (const [dx, dy] of drones) {
+    circle(ix + dx, iy + dy, 4, ...SHIP);
+    line(ix + dx - 22, iy + dy + 8, ix + dx - 4, iy + dy + 1, ...SHIP);
+  }
+  // waves
+  line(ix + 10, iy + 118, ix + 130, iy + 114, ...WHITE);
+  line(ix + 160, iy + 140, ix + 280, iy + 136, ...WHITE);
+  line(ix + 300, iy + 118, ix + 430, iy + 114, ...WHITE);
+  line(ix + 30, iy + 164, ix + 150, iy + 160, ...WHITE);
+  line(ix + 330, iy + 168, ix + 450, iy + 164, ...WHITE);
+  // the Merkury (large, listing, on fire)
+  poly([[ix + 30, iy + 132], [ix + 210, iy + 132], [ix + 190, iy + 166], [ix + 50, iy + 166]], ...SHIP);
+  rect(ix + 55, iy + 116, 100, 16, ...SHIP);
+  line(ix + 105, iy + 116, ix + 105, iy + 82, ...SHIP);
+  rect(ix + 105, iy + 82, 18, 12, ...RED);
+  // the MV Angara (smaller, right)
+  poly([[ix + 290, iy + 142], [ix + 430, iy + 142], [ix + 415, iy + 168], [ix + 305, iy + 168]], ...SEADARK);
+  rect(ix + 310, iy + 130, 70, 12, ...SEADARK);
+  line(ix + 345, iy + 130, ix + 345, iy + 106, ...SEADARK);
+  const cap = "THE MERKURY SINKS OFF BENGHAZI";
+  drawText(ix + (iw - textW(2, cap)) / 2, iy + ih + 6, cap, 2, ...INK);
 
   // Divider
-  rect(30, 490, 964, 3, ...INK);
+  rect(30, 470, 964, 3, ...INK);
 
-  // Story grid
-  story(30, 510, 462, "WASHINGTON", "TRUMP WARNS IRAN: 10 DAYS TO A DEAL",
-    "Trump warned Iran of 'bad things' if it rejects a nuclear deal, giving Tehran 10 to 15 days. A second US carrier is moving to the region.");
-  story(532, 510, 462, "CLIMATE", "COP31 ENDS WITH NO DEAL",
-    "Climate talks in Antalya ended on Sunday with no deal. Saudi Arabia pushed carbon capture and blocked fossil-fuel phase-out language; the EU rejected the text.");
-  story(30, 672, 462, "TECH", "HUANG BACK AS NVIDIA CEO",
-    "Nvidia's board reinstated Jensen Huang as chief executive on Monday. Nvidia shares rose 31% and SK hynix US shares 20%.");
-  story(532, 672, 462, "MARKETS", "ASIAN STOCKS SURGE",
+  // Story grid: three columns, three rows
+  const colX = [30, 362, 694];
+  const rows = [484, 626, 768];
+  gridStory(colX[0], rows[0], 300, "WASHINGTON", "TRUMP GIVES IRAN 10 DAYS TO DEAL",
+    "Trump warned Iran of 'bad things' if it rejects a nuclear deal, giving Tehran 10 to 15 days.");
+  gridStory(colX[1], rows[0], 300, "CLIMATE", "COP31 ENDS WITH NO DEAL",
+    "Talks in Antalya ended on Sunday with no deal. Saudi Arabia blocked phase-out language.");
+  gridStory(colX[2], rows[0], 300, "SEOUL", "RUSSIAN JETS NEAR KOREA",
+    "Russian jets neared Ulleung Island. Seoul issued a brief shelter alert. No breach.");
+  gridStory(colX[0], rows[1], 300, "TECH", "HUANG BACK AS NVIDIA CEO",
+    "Nvidia's board reinstated Jensen Huang as chief executive on Monday. Nvidia shares rose 31%.");
+  gridStory(colX[1], rows[1], 300, "MARKETS", "ASIAN STOCKS SURGE",
     "The Nikkei rose 4% to above 58,650 on Tuesday. South Korea gained 6.7% and Taiwan 9.1%.");
-  story(30, 818, 964, "HEALTH", "FIGHTING DISRUPTS EBOLA RESPONSE IN CONGO",
-    "Heavy fighting in Ituri, DR Congo, is disrupting the Ebola response and trapping health teams, officials said.");
+  gridStory(colX[2], rows[1], 300, "SOUTHEAST ASIA", "THAI-CAMBODIA SEA TALKS OPEN",
+    "Thailand and Cambodia opened sea-border talks in Kuala Lumpur. ASEAN calls the truce fragile.");
+  gridStory(colX[0], rows[2], 300, "INDIA", "TREKKERS MISSING IN HIMALAYAS",
+    "Eight trekkers are missing near Kedartal in Uttarakhand. Heavy snow is hampering the search.");
+  gridStory(colX[1], rows[2], 300, "GAZA", "UN WORKER KILLED IN GAZA",
+    "Israeli strikes killed at least three in Gaza, including UNRWA worker Adel al-Helo.");
+  gridStory(colX[2], rows[2], 300, "MEXICO", "MEXICO TRIES 'EL CHAPO ISIDRO'",
+    "Mexico will try 'El Chapo Isidro' at home despite a US extradition request. He was caught Friday.");
+
+  // Full-width health strip
+  drawText(30, 914, "HEALTH", 2, ...RED);
+  drawText(30, 932, "FIGHTING DISRUPTS EBOLA RESPONSE IN CONGO", 3, ...INK);
+  para(30, 956, "Heavy fighting in Ituri, DR Congo, is disrupting the Ebola response and trapping health teams, officials said.", 964, 2, 17, ...INK);
 
   // Footer
-  rect(30, 948, 964, 2, ...INK);
+  rect(30, 996, 964, 2, ...INK);
   const foot = "WORLD NEWS — TUESDAY, 24 NOVEMBER 2026";
-  drawText((W - textW(2, foot)) / 2, 960, foot, 2, ...INK);
+  drawText((W - textW(2, foot)) / 2, 1004, foot, 2, ...INK);
 }
 
 // ---------- PNG encoder ----------
